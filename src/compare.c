@@ -208,7 +208,7 @@ void bbox_fight(network net, sortable_bbox *a, sortable_bbox *b, int classes, in
     float *X  = calloc(net.w*net.h*net.c, sizeof(float));
     memcpy(X,                   im1.data, im1.w*im1.h*im1.c*sizeof(float));
     memcpy(X+im1.w*im1.h*im1.c, im2.data, im2.w*im2.h*im2.c*sizeof(float));
-    float *predictions = network_predict(net, X);
+    float *predictions = network_predict(&net, X); // G.B
     ++total_compares;
 
     int i;
@@ -259,7 +259,7 @@ void BattleRoyaleWithCheese(char *filename, char *weightfile)
 {
     int classes = 20;
     int i,j;
-    network net = parse_network_cfg(filename);
+    network net = *parse_network_cfg(filename);
     if(weightfile){
         load_weights(&net, weightfile);
     }
