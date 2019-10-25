@@ -3,15 +3,44 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <float.h>
 #include <limits.h>
 #include <time.h>
-#include <sys/time.h>
-
+//#include <sys/time.h>
+#include <stdint.h>
 #include "utils.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <stdint.h> // portable: uint64_t   MSVC: __int64 
 
+// MSVC defines this in winsock2.h!?
+typedef struct timeval {
+	long tv_sec;
+	long tv_usec;
+} timeval;
+
+int gettimeofday(struct timeval * tp, struct timezone * tzp)
+{
+	// Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
+	// This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
+	// until 00:00:00 January 1, 1970 
+	static const uint64_t EPOCH = ((uint64_t)116444736000000000ULL);
+
+	SYSTEMTIME  system_time;
+	FILETIME    file_time;
+	uint64_t    time;
+
+	GetSystemTime(&system_time);
+	SystemTimeToFileTime(&system_time, &file_time);
+	time = ((uint64_t)file_time.dwLowDateTime);
+	time += ((uint64_t)file_time.dwHighDateTime) << 32;
+
+	tp->tv_sec = (long)((time - EPOCH) / 10000000L);
+	tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
+	return 0;
+}
 /*
 // old timing. is it better? who knows!!
 double get_wall_time()
@@ -71,8 +100,10 @@ int *read_map(char *filename)
     return map;
 }
 
-void sorta_shuffle(void *arr, size_t n, size_t size, size_t sections)
+void sorta_shuffle(void *_arr, size_t n, size_t size, size_t sections)
 {
+	uint8_t* arr = (uint8_t*)_arr;
+
     size_t i;
     for(i = 0; i < sections; ++i){
         size_t start = n*i/sections;
@@ -82,8 +113,9 @@ void sorta_shuffle(void *arr, size_t n, size_t size, size_t sections)
     }
 }
 
-void shuffle(void *arr, size_t n, size_t size)
+void shuffle(void *_arr, size_t n, size_t size)
 {
+	uint8_t* arr = (uint8_t*)_arr;
     size_t i;
     void *swp = calloc(1, size);
     for(i = 0; i < n-1; ++i){
